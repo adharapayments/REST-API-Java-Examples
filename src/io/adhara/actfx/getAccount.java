@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,10 +46,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class getInterface {
+public class getAccount {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/getInterface";
+	private static final String URL = "/getAccount";
 	private static String domain;
 	//private static String url_stream;
 	private static String url_polling;
@@ -66,7 +67,7 @@ public class getInterface {
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public getInterfaceRequest  getInterface;
+		public getAccountRequest  getAccount;
 		
 		public hftRequest() {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -76,7 +77,7 @@ public class getInterface {
 	public static class hftResponse{
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public getInterfaceResponse getInterfaceResponse;
+        public getAccountResponse getAccountResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -107,26 +108,28 @@ public class getInterface {
         public String        timestamp;
     }
 
-	public static class getInterfaceRequest {
+	public static class getAccountRequest {
         public String        user;
         public String        token;
 
-        public getInterfaceRequest( String user, String token ) {
+        public getAccountRequest( String user, String token ) {
             this.user = user;
             this.token = token;
         }
     }
 
-    public static class getInterfaceResponse {
-    	public List<tinterfaceTick> tinterface;
+    public static class getAccountResponse {
+        public List<accountTick>    account;
         public String               timestamp;
     }
 	
-    public static class tinterfaceTick {
+    public static class accountTick {
         public String        name;
         public String        description;
-        public String        account;
-        public String        commissions;
+        public String        style;
+        public int           leverage;
+        public String        rollover;
+        public String        settlement;
     }
 
     public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
@@ -190,10 +193,10 @@ public class getInterface {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.getInterfaceResponse != null){
-                        		if (response.getInterfaceResponse.tinterface!= null){
-									for (tinterfaceTick tick : response.getInterfaceResponse.tinterface){
-										System.out.println("Name: " + tick.name + " Account: " + tick.account + " Commissions: " + tick.commissions);
+                        	if (response.getAccountResponse != null){
+                        		if (response.getAccountResponse.account!= null){
+									for (accountTick tick : response.getAccountResponse.account){
+										System.out.println("Name: " + tick.name + " Style: " + tick.style + " Leverage: " + tick.leverage);
                                     }
 								}
                         	}
@@ -246,9 +249,9 @@ public class getInterface {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a getInterface request
+	        // Prepare and send a getAccount request
 	        // -----------------------------------------
-			hftrequest.getInterface = new getInterfaceRequest(user, token);
+			hftrequest.getAccount = new getAccountRequest(user, token);
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 			request = new StringEntity(mapper.writeValueAsString(hftrequest));
@@ -302,7 +305,7 @@ public class getInterface {
 		}
     }
 
-	public getInterface() {
+	public getAccount() {
 		super();
 	}
 

@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -47,10 +48,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class orderStreaming {
+public class positionStreaming {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/getOrder";
+	private static final String URL = "/getPosition";
 	private static String domain;
 	private static String url_stream;
 	//private static String url_polling;
@@ -68,7 +69,7 @@ public class orderStreaming {
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public getOrderRequest  getOrder;
+		public getPositionRequest  getPosition;
 		
 		public hftRequest( String user) {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -78,15 +79,15 @@ public class orderStreaming {
 			this.getAuthorizationToken = new getAuthorizationTokenRequest(user, challengeresp); 
 		}
 		
-		public hftRequest( String user, String token, List<String> security, List<String> tinterface, List<String> type, int interval ) {
-			this.getOrder = new getOrderRequest(user, token, security, tinterface, type, interval); 
+		public hftRequest( String user, String token, List<String> asset, List<String> security, List<String> account, int interval ) {
+			this.getPosition = new getPositionRequest(user, token, asset, security, account, interval); 
 		}
 	}
 	
-	public static class hftResponse{
+	public static class hftResponse {
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public getOrderResponse getOrderResponse;
+        public getPositionResponse getPositionResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -117,63 +118,64 @@ public class orderStreaming {
         public String        timestamp;
     }
 
-	public static class getOrderRequest {
+	public static class getPositionRequest {
 		public String        user;
 		public String        token;
+		public List<String>  asset;
 		public List<String>  security;
-		public List<String>  tinterface;
-		public List<String>  type;
+		public List<String>  account;
 		public int           interval;
 
-		public getOrderRequest( String user, String token, List<String> security, List<String> tinterface, List<String> type, int interval ) {
+		public getPositionRequest( String user, String token, List<String> asset, List<String> security, List<String> account, int interval ) {
 			this.user = user;
 			this.token = token;
+			this.asset = asset;
 			this.security = security;
-			this.tinterface = tinterface;
-			this.type = type;
+			this.account = account;
 			this.interval = interval;
 		}
 	}
-	
-	public static class getOrderResponse {
+
+	public static class getPositionResponse {
 		public int              result;
 		public String           message;
-		public List<orderTick>  order;
-		public orderHeartbeat   heartbeat;
+		public List<assetPositionTick>  assetposition;
+		public List<securityPositionTick>  securityposition;
+		public accountingTick  accounting;
+		public positionHeartbeat  heartbeat;
 		public String           timestamp;
-		
 	}
 	
-	public static class orderTick {
-		public int     tempid;
-		public String  orderid;
-		public String  fixid;
+	public static class assetPositionTick {
 		public String  account;
-		public String  tinterface;
-		public String  security;
-		public int     pips;
-		public int     quantity;
-		public String  side;
-		public String  type;
-		public double  limitprice;
-		public int     maxshowquantity;
-		public String  timeinforce;
-		public int     seconds;
-		public int     milliseconds;
-		public String  expiration;
-		public double  finishedprice;
-		public int     finishedquantity;
-		public String  commcurrency;
-		public double  commission;
-		public double  priceatstart;
-		public int     userparam;
-		public String  status;
-		public String  reason;
+		public String  asset;
+		public double  exposure;
+        public double  totalrisk;
+        public double  pl;
 	}
 	
-	public static class orderHeartbeat {
+	public static class securityPositionTick {
+		public String  account;
+		public String  security;
+		public double  exposure;
+		public String  side;
+		public double  price;
+		public int     pips;
+		public double  pl;
+	}
+	
+	public static class accountingTick {
+		public double  strategyPL;
+		public double  totalequity;
+		public double  usedmargin;
+		public double  freemargin;
+		public String  m2mcurrency;
+	}
+	
+	public static class positionHeartbeat {
+		public List<String>  asset;
 		public List<String>  security;
-		public List<String>  tinterface;
+		public List<String>  account;
 	}
 
 	public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
@@ -227,7 +229,9 @@ public class orderStreaming {
                         String line = null;
                         
                         while ((line = bufferedReader.readLine()) != null) {
+                        	System.out.println(line);
                         	hftResponse response = mapper.readValue(line, hftResponse.class);
+                        	
                         	
                         	if (response.getAuthorizationChallengeResponse != null){
                         		challenge = response.getAuthorizationChallengeResponse.challenge;
@@ -237,20 +241,29 @@ public class orderStreaming {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.getOrderResponse != null){
-                        		if (response.getOrderResponse.timestamp != null){
-									System.out.println("Response timestamp: " + response.getOrderResponse.timestamp + " Contents:");
+                        	if (response.getPositionResponse != null){
+                        		if (response.getPositionResponse.timestamp != null){
+                                	System.out.println("Response timestamp: " + response.getPositionResponse.timestamp + " Contents:");
 								}
-								if (response.getOrderResponse.order!= null){
-									for (orderTick tick : response.getOrderResponse.order){
-										System.out.println("TempId: " + tick.tempid + " OrderId: " + tick.orderid + " Security: " + tick.security + " Account: " + tick.account + " Quantity: " + tick.quantity + " Type: " + tick.type + " Side: " + tick.side + " Status: " + tick.status);
+                        		if (response.getPositionResponse.accounting!= null){
+                        			accountingTick tick = response.getPositionResponse.accounting;
+                        			System.out.println("m2mcurrency: " + tick.m2mcurrency + "StrategyPL: " + tick.strategyPL + " TotalEquity: " + tick.totalequity + " UsedMargin: " + tick.usedmargin + " FreeMargin: " + tick.freemargin);
+								}
+								if (response.getPositionResponse.assetposition!= null){
+									for (assetPositionTick tick : response.getPositionResponse.assetposition){
+										System.out.println("Asset: " + tick.asset + " Account: " + tick.account + " Exposure: " + tick.exposure + " PL: " + tick.pl);
                                     }
 								}
-								if (response.getOrderResponse.heartbeat!= null){
+								if (response.getPositionResponse.securityposition!= null){
+									for (securityPositionTick tick : response.getPositionResponse.securityposition){
+										System.out.println("Security: " + tick.security + " Account: " + tick.account + " Exposure: " + tick.exposure + " Price: " + tick.price + " Pips: " + tick.pips + " PL: " + tick.pl);
+                                    }
+								}
+								if (response.getPositionResponse.heartbeat!= null){
 									System.out.println("Heartbeat!");
 								}
-								if (response.getOrderResponse.message != null){
-									System.out.println("Message from server: " + response.getOrderResponse.message);
+								if (response.getPositionResponse.message != null){
+									System.out.println("Message from server: " + response.getPositionResponse.message);
 								}
                         	}
                         }
@@ -301,9 +314,9 @@ public class orderStreaming {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a order request
+	        // Prepare and send a position request
 	        // -----------------------------------------
-			hftrequest = new hftRequest(user, token, Arrays.asList("EUR/USD", "GBP/JPY", "GBP/USD"), null, null, interval);
+			hftrequest = new hftRequest(user, token, null, Arrays.asList("EUR/USD", "GBP/USD"), null, interval);
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 			request = new StringEntity(mapper.writeValueAsString(hftrequest));
@@ -357,7 +370,7 @@ public class orderStreaming {
 		}
     }
 
-	public orderStreaming() {
+	public positionStreaming() {
 		super();
 	}
 

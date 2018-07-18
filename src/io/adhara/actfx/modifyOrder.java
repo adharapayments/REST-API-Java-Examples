@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,10 +47,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class cancelOrder {
+public class modifyOrder {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/cancelOrder";
+	private static final String URL = "/modifyOrder";
 	private static String domain;
 	//private static String url_stream;
 	private static String url_polling;
@@ -67,7 +68,7 @@ public class cancelOrder {
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public cancelOrderRequest  cancelOrder;
+		public modifyOrderRequest  modifyOrder;
 		
 		public hftRequest( String user) {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -77,15 +78,15 @@ public class cancelOrder {
 			this.getAuthorizationToken = new getAuthorizationTokenRequest(user, challengeresp); 
 		}
 		
-		public hftRequest( String user, String token, List<String> fixid ) {
-			this.cancelOrder = new cancelOrderRequest(user, token, fixid); 
+		public hftRequest( String user, String token, List<modOrder> order ) {
+			this.modifyOrder = new modifyOrderRequest(user, token, order); 
 		}
 	}
 	
 	public static class hftResponse{
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public cancelOrderResponse cancelOrderResponse;
+        public modifyOrderResponse modifyOrderResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -116,25 +117,31 @@ public class cancelOrder {
         public String        timestamp;
     }
 
-	public static class cancelOrderRequest {
+	public static class modifyOrderRequest {
 		public String        user;
 		public String        token;
-		public List<String>  fixid;
+		public List<modOrder>   order;
 
-		public cancelOrderRequest( String user, String token, List<String> fixid ) {
+		public modifyOrderRequest( String user, String token, List<modOrder> order ) {
 			this.user = user;
 			this.token = token;
-			this.fixid = fixid;
+			this.order = order;
 		}
 	}
+	
+	public static class modOrder {
+		public String  fixid;
+        public double  price;
+        public int     quantity;
+    }
 
-	public static class cancelOrderResponse {
-		public List<cancelTick> order;
+	public static class modifyOrderResponse {
+		public List<modifyTick> order;
 		public String           message;
 		public String           timestamp;
 	}
 	
-	public static class cancelTick {
+	public static class modifyTick {
 		public String  fixid;
 		public String  result;
 	}
@@ -200,14 +207,14 @@ public class cancelOrder {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.cancelOrderResponse != null){
-                        		if (response.cancelOrderResponse.order != null){
-									for (cancelTick tick : response.cancelOrderResponse.order){
-										System.out.println("Result from server: " + tick.fixid + "-" + tick.result);
-                                    }
-								}
-								if (response.cancelOrderResponse.message != null){
-									System.out.println("Message from server: " + response.cancelOrderResponse.message);
+                        	if (response.modifyOrderResponse != null){
+                        		if (response.modifyOrderResponse.order != null){
+                        			for (modifyTick tick : response.modifyOrderResponse.order){
+                        				System.out.println("Result from server: " + tick.fixid + "-" + tick.result);
+                        			}
+                        		}
+								if (response.modifyOrderResponse.message != null){
+									System.out.println("Message from server: " + response.modifyOrderResponse.message);
 								}
                         	}
                         }
@@ -258,10 +265,16 @@ public class cancelOrder {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a cancelOrder request for two pending orders
+	        // Prepare and send a modifyOrder request for two pending orders
 	        // -----------------------------------------
-			String order1 = "TRD_20151006145512719_0125";
-			String order2 = "TRD_20151006145524148_0124";
+			modOrder order1 = new modOrder();
+			order1.fixid = "TRD_20151007112351168_0128";
+			order1.price = 1.11005;
+			order1.quantity = 20000;
+			modOrder order2 = new modOrder();
+			order2.fixid = "TRD_20151007112401904_0127";
+			order2.price = 1.11006;
+			order2.quantity = 30000;
 			hftrequest = new hftRequest(user, token, Arrays.asList(order1, order2));
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
@@ -316,7 +329,7 @@ public class cancelOrder {
 		}
     }
 
-	public cancelOrder() {
+	public modifyOrder() {
 		super();
 	}
 

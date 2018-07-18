@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,10 +47,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class positionPolling {
+public class cancelOrder {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/getPosition";
+	private static final String URL = "/cancelOrder";
 	private static String domain;
 	//private static String url_stream;
 	private static String url_polling;
@@ -67,7 +68,7 @@ public class positionPolling {
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public getPositionRequest  getPosition;
+		public cancelOrderRequest  cancelOrder;
 		
 		public hftRequest( String user) {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -77,15 +78,15 @@ public class positionPolling {
 			this.getAuthorizationToken = new getAuthorizationTokenRequest(user, challengeresp); 
 		}
 		
-		public hftRequest( String user, String token, List<String> asset, List<String> security, List<String> account ) {
-			this.getPosition = new getPositionRequest(user, token, asset, security, account); 
+		public hftRequest( String user, String token, List<String> fixid ) {
+			this.cancelOrder = new cancelOrderRequest(user, token, fixid); 
 		}
 	}
 	
-	public static class hftResponse {
+	public static class hftResponse{
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public getPositionResponse getPositionResponse;
+        public cancelOrderResponse cancelOrderResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -116,64 +117,27 @@ public class positionPolling {
         public String        timestamp;
     }
 
-	public static class getPositionRequest {
+	public static class cancelOrderRequest {
 		public String        user;
 		public String        token;
-		public List<String>  asset;
-		public List<String>  security;
-		public List<String>  account;
+		public List<String>  fixid;
 
-		public getPositionRequest( String user, String token, List<String> asset, List<String> security, List<String> account ) {
+		public cancelOrderRequest( String user, String token, List<String> fixid ) {
 			this.user = user;
 			this.token = token;
-			this.asset = asset;
-			this.security = security;
-			this.account = account;
+			this.fixid = fixid;
 		}
 	}
 
-	public static class getPositionResponse {
-		public int              result;
+	public static class cancelOrderResponse {
+		public List<cancelTick> order;
 		public String           message;
-		public List<assetPositionTick>  assetposition;
-		public List<securityPositionTick>  securityposition;
-		public accountingTick  accounting;
-		public positionHeartbeat  heartbeat;
 		public String           timestamp;
 	}
 	
-	public static class assetPositionTick {
-		public String  account;
-		public String  asset;
-		public double  exposure;
-        public double  totalrisk;
-        public double  pl;
-	}
-	
-	public static class securityPositionTick {
-		public String  account;
-		public String  security;
-		public double  exposure;
-		public String  side;
-		public double  price;
-		public int     pips;
-		public double  equity;
-		public double  freemargin;
-		public double  pl;
-	}
-	
-	public static class accountingTick {
-		public double  strategyPL;
-		public double  totalequity;
-		public double  usedmargin;
-		public double  freemargin;
-		public String  m2mcurrency;
-	}
-	
-	public static class positionHeartbeat {
-		public List<String>  asset;
-		public List<String>  security;
-		public List<String>  account;
+	public static class cancelTick {
+		public String  fixid;
+		public String  result;
 	}
 
 	public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
@@ -227,7 +191,6 @@ public class positionPolling {
                         String line = null;
                         
                         while ((line = bufferedReader.readLine()) != null) {
-                        	System.out.println(line);
                         	hftResponse response = mapper.readValue(line, hftResponse.class);
                         	
                         	if (response.getAuthorizationChallengeResponse != null){
@@ -238,23 +201,14 @@ public class positionPolling {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.getPositionResponse != null){
-                        		if (response.getPositionResponse.accounting!= null){
-                        			accountingTick tick = response.getPositionResponse.accounting;
-                        			System.out.println("m2mcurrency: " + tick.m2mcurrency + "StrategyPL: " + tick.strategyPL + " TotalEquity: " + tick.totalequity + " UsedMargin: " + tick.usedmargin + " FreeMargin: " + tick.freemargin);
-                                }
-                        		if (response.getPositionResponse.assetposition!= null){
-									for (assetPositionTick tick : response.getPositionResponse.assetposition){
-										System.out.println("Asset: " + tick.asset + " Account: " + tick.account + " Exposure: " + tick.exposure + " PL: " + tick.pl);
+                        	if (response.cancelOrderResponse != null){
+                        		if (response.cancelOrderResponse.order != null){
+									for (cancelTick tick : response.cancelOrderResponse.order){
+										System.out.println("Result from server: " + tick.fixid + "-" + tick.result);
                                     }
 								}
-								if (response.getPositionResponse.securityposition!= null){
-									for (securityPositionTick tick : response.getPositionResponse.securityposition){
-										System.out.println("Security: " + tick.security + " Account: " + tick.account + " Equity: " + tick.equity + " Exposure: " + tick.exposure + " Price: " + tick.price + " Pips: " + tick.pips + " PL: " + tick.pl);
-                                    }
-								}
-								if (response.getPositionResponse.message != null){
-									System.out.println("Message from server: " + response.getPositionResponse.message);
+								if (response.cancelOrderResponse.message != null){
+									System.out.println("Message from server: " + response.cancelOrderResponse.message);
 								}
                         	}
                         }
@@ -286,7 +240,7 @@ public class positionPolling {
 			client.execute(httpRequest, responseHandler);
 			
 			// create challenge response
-			byte[] a = Hex.decodeHex(challenge.toCharArray());;
+			byte[] a = Hex.decodeHex(challenge.toCharArray());
 			byte[] b = password.getBytes();
 			byte[] c = new byte[a.length + b.length];
 			System.arraycopy(a, 0, c, 0, a.length);
@@ -305,9 +259,11 @@ public class positionPolling {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a position request
+	        // Prepare and send a cancelOrder request for two pending orders
 	        // -----------------------------------------
-			hftrequest = new hftRequest(user, token, null, Arrays.asList("EUR/USD", "GBP/USD"), null);
+			String order1 = "TRD_20151006145512719_0125";
+			String order2 = "TRD_20151006145524148_0124";
+			hftrequest = new hftRequest(user, token, Arrays.asList(order1, order2));
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 			request = new StringEntity(mapper.writeValueAsString(hftrequest));
@@ -361,7 +317,7 @@ public class positionPolling {
 		}
     }
 
-	public positionPolling() {
+	public cancelOrder() {
 		super();
 	}
 

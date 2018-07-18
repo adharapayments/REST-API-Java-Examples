@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -34,6 +35,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
@@ -46,13 +48,13 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class modifyOrder {
+public class orderStreaming {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/modifyOrder";
+	private static final String URL = "/getOrder";
 	private static String domain;
-	//private static String url_stream;
-	private static String url_polling;
+	private static String url_stream;
+	//private static String url_polling;
 	private static String url_challenge;
 	private static String url_token;
 	private static String user;
@@ -62,12 +64,12 @@ public class modifyOrder {
 	private static String ssl_cert;
 	private static String challenge;
 	private static String token;
-	//private static int interval;
+	private static int interval;
 	
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public modifyOrderRequest  modifyOrder;
+		public getOrderRequest  getOrder;
 		
 		public hftRequest( String user) {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -77,15 +79,15 @@ public class modifyOrder {
 			this.getAuthorizationToken = new getAuthorizationTokenRequest(user, challengeresp); 
 		}
 		
-		public hftRequest( String user, String token, List<modOrder> order ) {
-			this.modifyOrder = new modifyOrderRequest(user, token, order); 
+		public hftRequest( String user, String token, List<String> security, List<String> tinterface, List<String> type, int interval ) {
+			this.getOrder = new getOrderRequest(user, token, security, tinterface, type, interval); 
 		}
 	}
 	
 	public static class hftResponse{
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public modifyOrderResponse modifyOrderResponse;
+        public getOrderResponse getOrderResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -116,33 +118,63 @@ public class modifyOrder {
         public String        timestamp;
     }
 
-	public static class modifyOrderRequest {
+	public static class getOrderRequest {
 		public String        user;
 		public String        token;
-		public List<modOrder>   order;
+		public List<String>  security;
+		public List<String>  tinterface;
+		public List<String>  type;
+		public int           interval;
 
-		public modifyOrderRequest( String user, String token, List<modOrder> order ) {
+		public getOrderRequest( String user, String token, List<String> security, List<String> tinterface, List<String> type, int interval ) {
 			this.user = user;
 			this.token = token;
-			this.order = order;
+			this.security = security;
+			this.tinterface = tinterface;
+			this.type = type;
+			this.interval = interval;
 		}
 	}
 	
-	public static class modOrder {
-		public String  fixid;
-        public double  price;
-        public int     quantity;
-    }
-
-	public static class modifyOrderResponse {
-		public List<modifyTick> order;
+	public static class getOrderResponse {
+		public int              result;
 		public String           message;
+		public List<orderTick>  order;
+		public orderHeartbeat   heartbeat;
 		public String           timestamp;
+		
 	}
 	
-	public static class modifyTick {
+	public static class orderTick {
+		public int     tempid;
+		public String  orderid;
 		public String  fixid;
-		public String  result;
+		public String  account;
+		public String  tinterface;
+		public String  security;
+		public int     pips;
+		public int     quantity;
+		public String  side;
+		public String  type;
+		public double  limitprice;
+		public int     maxshowquantity;
+		public String  timeinforce;
+		public int     seconds;
+		public int     milliseconds;
+		public String  expiration;
+		public double  finishedprice;
+		public int     finishedquantity;
+		public String  commcurrency;
+		public double  commission;
+		public double  priceatstart;
+		public int     userparam;
+		public String  status;
+		public String  reason;
+	}
+	
+	public static class orderHeartbeat {
+		public List<String>  security;
+		public List<String>  tinterface;
 	}
 
 	public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
@@ -187,7 +219,7 @@ public class modifyOrder {
                     HttpEntity entity = httpresponse.getEntity();
                     
                     // --------------------------------------------------------------
-                    // Wait for response from server (polling)
+                    // Wait for continuous responses from server (streaming)
                     // --------------------------------------------------------------
 
                     try {
@@ -206,14 +238,20 @@ public class modifyOrder {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.modifyOrderResponse != null){
-                        		if (response.modifyOrderResponse.order != null){
-                        			for (modifyTick tick : response.modifyOrderResponse.order){
-                        				System.out.println("Result from server: " + tick.fixid + "-" + tick.result);
-                        			}
-                        		}
-								if (response.modifyOrderResponse.message != null){
-									System.out.println("Message from server: " + response.modifyOrderResponse.message);
+                        	if (response.getOrderResponse != null){
+                        		if (response.getOrderResponse.timestamp != null){
+									System.out.println("Response timestamp: " + response.getOrderResponse.timestamp + " Contents:");
+								}
+								if (response.getOrderResponse.order!= null){
+									for (orderTick tick : response.getOrderResponse.order){
+										System.out.println("TempId: " + tick.tempid + " OrderId: " + tick.orderid + " Security: " + tick.security + " Account: " + tick.account + " Quantity: " + tick.quantity + " Type: " + tick.type + " Side: " + tick.side + " Status: " + tick.status);
+                                    }
+								}
+								if (response.getOrderResponse.heartbeat!= null){
+									System.out.println("Heartbeat!");
+								}
+								if (response.getOrderResponse.message != null){
+									System.out.println("Message from server: " + response.getOrderResponse.message);
 								}
                         	}
                         }
@@ -221,7 +259,7 @@ public class modifyOrder {
                     catch (IOException e) { e.printStackTrace(); }
                     catch (Exception e) { e.printStackTrace(); }
                     
-                    return null;
+                    return entity != null ? EntityUtils.toString(entity) : null;
                     
                 } else {
                     throw new ClientProtocolException("Unexpected response status: " + status);
@@ -264,22 +302,14 @@ public class modifyOrder {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a modifyOrder request for two pending orders
+	        // Prepare and send a order request
 	        // -----------------------------------------
-			modOrder order1 = new modOrder();
-			order1.fixid = "TRD_20151007112351168_0128";
-			order1.price = 1.11005;
-			order1.quantity = 20000;
-			modOrder order2 = new modOrder();
-			order2.fixid = "TRD_20151007112401904_0127";
-			order2.price = 1.11006;
-			order2.quantity = 30000;
-			hftrequest = new hftRequest(user, token, Arrays.asList(order1, order2));
+			hftrequest = new hftRequest(user, token, Arrays.asList("EUR/USD", "GBP/JPY", "GBP/USD"), null, null, interval);
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 			request = new StringEntity(mapper.writeValueAsString(hftrequest));
 			System.out.println(mapper.writeValueAsString(hftrequest));
-			httpRequest = new HttpPost(domain + ":" + request_port + url_polling + URL);
+			httpRequest = new HttpPost(domain + ":" + request_port + url_stream + URL);
 			httpRequest.setEntity(request);
 			client.execute(httpRequest, responseHandler);
 		} finally {
@@ -294,13 +324,13 @@ public class modifyOrder {
 		try {
 			input = new FileInputStream("config.properties");
 			prop.load(input);
-			//url_stream = prop.getProperty("url-stream");
-			url_polling = prop.getProperty("url-polling");
+			url_stream = prop.getProperty("url-stream");
+			//url_polling = prop.getProperty("url-polling");
 			url_challenge = prop.getProperty("url-challenge");
 			url_token = prop.getProperty("url-token");
 			user = prop.getProperty("user");
 			password = prop.getProperty("password");
-			//interval = Integer.parseInt(prop.getProperty("interval"));
+			interval = Integer.parseInt(prop.getProperty("interval"));
 			if (ssl){
 				domain = prop.getProperty("ssl-domain");
 				authentication_port = prop.getProperty("ssl-authentication-port");
@@ -328,7 +358,7 @@ public class modifyOrder {
 		}
     }
 
-	public modifyOrder() {
+	public orderStreaming() {
 		super();
 	}
 

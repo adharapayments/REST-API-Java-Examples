@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,10 +47,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class orderPolling {
+public class getHistoricalPrice {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/getOrder";
+	private static final String URL = "/getHistoricalPrice";
 	private static String domain;
 	//private static String url_stream;
 	private static String url_polling;
@@ -67,7 +68,7 @@ public class orderPolling {
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public getOrderRequest  getOrder;
+		public getHistoricalPriceRequest  getHistoricalPrice;
 		
 		public hftRequest( String user) {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -77,15 +78,15 @@ public class orderPolling {
 			this.getAuthorizationToken = new getAuthorizationTokenRequest(user, challengeresp); 
 		}
 		
-		public hftRequest( String user, String token, List<String> security, List<String> tinterface, List<String> type ) {
-			this.getOrder = new getOrderRequest(user, token, security, tinterface, type); 
+		public hftRequest( String user, String token, List<String> security, List<String> tinterface, String granularity, String side, int number ) {
+			this.getHistoricalPrice = new getHistoricalPriceRequest(user, token, security, tinterface, granularity, side, number); 
 		}
 	}
 	
-	public static class hftResponse{
+	public static class hftResponse {
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public getOrderResponse getOrderResponse;
+        public getHistoricalPriceResponse getHistoricalPriceResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -116,64 +117,47 @@ public class orderPolling {
         public String        timestamp;
     }
 
-	public static class getOrderRequest {
-		public String        user;
-		public String        token;
-		public List<String>  security;
-		public List<String>  tinterface;
-		public List<String>  type;
-
-		public getOrderRequest( String user, String token, List<String> security, List<String> tinterface, List<String> type ) {
-			this.user = user;
-			this.token = token;
-			this.security = security;
-			this.tinterface = tinterface;
-			this.type = type;
-		}
-	}
-	
-	public static class getOrderResponse {
-		public int              result;
-		public String           message;
-		public List<orderTick>  order;
-		public orderHeartbeat   heartbeat;
-		public String           timestamp;
+    public static class getHistoricalPriceRequest {
+        public String        user;
+        public String        token;
+        public List<String>  security;
+        public List<String>  tinterface;
+        public String        granularity;
+        public String        side;
+        public int           number;
 		
-	}
-	
-	public static class orderTick {
-		public int     tempid;
-		public String  orderid;
-		public String  fixid;
-		public String  account;
-		public String  tinterface;
-		public String  security;
-		public int     pips;
-		public int     quantity;
-		public String  side;
-		public String  type;
-		public double  limitprice;
-		public int     maxshowquantity;
-		public String  timeinforce;
-		public int     seconds;
-		public int     milliseconds;
-		public String  expiration;
-		public double  finishedprice;
-		public int     finishedquantity;
-		public String  commcurrency;
-		public double  commission;
-		public double  priceatstart;
-		public int     userparam;
-		public String  status;
-		public String  reason;
-	}
-	
-	public static class orderHeartbeat {
-		public List<String>  security;
-		public List<String>  tinterface;
-	}
+        
+        public getHistoricalPriceRequest( String user, String token, List<String> security, List<String> tinterface, String granularity, String side, int number ) {
+        	this.user = user;
+        	this.token = token;
+        	this.security = security;
+        	this.tinterface = tinterface;
+        	this.granularity = granularity;
+			this.side = side;
+			this.number = number;
+        }
+    }
 
-	public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+    public static class getHistoricalPriceResponse {
+        public int              result;
+        public String           message;
+        public List<candleTick> candle;
+        public String           timestamp;
+    }
+
+    public static class candleTick {
+        public String  security;
+        public String  tinterface;
+        public int     timestamp;
+        public String  side;
+        public double  open;
+        public double  high;
+        public double  low;
+        public double  close;
+        public int     ticks;
+    }
+
+    public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
     	
     	// get properties from file
     	getProperties();
@@ -234,14 +218,14 @@ public class orderPolling {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.getOrderResponse != null){
-                        		if (response.getOrderResponse.order!= null){
-									for (orderTick tick : response.getOrderResponse.order){
-										System.out.println("TempId: " + tick.tempid + " OrderId: " + tick.orderid + " Security: " + tick.security + " Account: " + tick.account + " Quantity: " + tick.quantity + " Type: " + tick.type + " Side: " + tick.side + " Status: " + tick.status);
+                        	if (response.getHistoricalPriceResponse != null){
+                        		if (response.getHistoricalPriceResponse.candle != null){
+                                    for (candleTick tick : response.getHistoricalPriceResponse.candle){
+                                    	System.out.println("Security: " + tick.security + " tinterface: " + tick.tinterface +  " TimeStamp: " + tick.timestamp +  " Side: " + tick.side + " Open: " + tick.open + " High: " + tick.high + " Low: " + tick.low + " Close: " + tick.close + " Ticks: " + tick.ticks);
                                     }
-								}
-								if (response.getOrderResponse.message != null){
-									System.out.println("Message from server: " + response.getOrderResponse.message);
+                                }
+                                if (response.getHistoricalPriceResponse.message != null){
+									System.out.println("Message from server: " + response.getHistoricalPriceResponse.message);
 								}
                         	}
                         }
@@ -292,9 +276,9 @@ public class orderPolling {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a order request
+	        //  Prepare and send a getHistoricalPrices request
 	        // -----------------------------------------
-			hftrequest = new hftRequest(user, token, Arrays.asList("EUR/USD", "GBP/JPY", "GBP/USD"), null, null);
+			hftrequest = new hftRequest(user, token, Arrays.asList("EUR/USD", "GBP/USD"), null, "s1", "ask", 3);
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 			request = new StringEntity(mapper.writeValueAsString(hftrequest));
@@ -305,7 +289,7 @@ public class orderPolling {
 		} finally {
 			client.close();
 		}
-
+	
 	}
     
     public static void getProperties(){
@@ -348,7 +332,7 @@ public class orderPolling {
 		}
     }
 
-	public orderPolling() {
+	public getHistoricalPrice() {
 		super();
 	}
 

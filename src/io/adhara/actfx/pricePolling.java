@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,10 +47,10 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 // 2) 'httpclient-xxx.jar' with MAVEN dependency: groupId 'org.apache.httpcomponents', artifactId 'fluent-hc' and version 4.5
 //                         or download from main project at 'https://hc.apache.org'
 
-public class setOrder {
+public class pricePolling {
 
 	private static final boolean ssl = true;
-	private static final String URL = "/setOrder";
+	private static final String URL = "/getPrice";
 	private static String domain;
 	//private static String url_stream;
 	private static String url_polling;
@@ -67,7 +68,7 @@ public class setOrder {
 	public static class hftRequest {
 		public getAuthorizationChallengeRequest getAuthorizationChallenge;
 		public getAuthorizationTokenRequest getAuthorizationToken;
-		public setOrderRequest  setOrder;
+		public getPriceRequest  getPrice;
 		
 		public hftRequest( String user) {
 			this.getAuthorizationChallenge = new getAuthorizationChallengeRequest(user); 
@@ -77,15 +78,15 @@ public class setOrder {
 			this.getAuthorizationToken = new getAuthorizationTokenRequest(user, challengeresp); 
 		}
 		
-		public hftRequest( String user, String token, List<orderRequest> order ) {
-			this.setOrder = new setOrderRequest(user, token, order); 
+		public hftRequest( String user, String token, List<String> security, List<String> tinterface, String granularity, int levels ) {
+			this.getPrice = new getPriceRequest(user, token, security, tinterface, granularity, levels); 
 		}
 	}
 	
-	public static class hftResponse{
+	public static class hftResponse {
 		public getAuthorizationChallengeResponse getAuthorizationChallengeResponse;
         public getAuthorizationTokenResponse getAuthorizationTokenResponse;
-        public setOrderResponse setOrderResponse;
+        public getPriceResponse getPriceResponse;
     }
 	
 	public static class getAuthorizationChallengeRequest {
@@ -116,40 +117,47 @@ public class setOrder {
         public String        timestamp;
     }
 
-	public static class setOrderRequest {
-		public String        user;
-		public String        token;
-		public List<orderRequest>  order;
+    public static class getPriceRequest {
+        public String        user;
+        public String        token;
+        public List<String>  security;
+        public List<String>  tinterface;
+        public String        granularity;
+		public int           levels;
+        
+        public getPriceRequest( String user, String token, List<String> security, List<String> tinterface, String granularity, int levels ) {
+        	this.user = user;
+        	this.token = token;
+        	this.security = security;
+        	this.tinterface = tinterface;
+        	this.granularity = granularity;
+			this.levels = levels;
+        }
+    }
 
-		public setOrderRequest( String user, String token, List<orderRequest> order ) {
-			this.user = user;
-			this.token = token;
-			this.order = order;
-		}
-	}
+    public static class getPriceResponse {
+        public int              result;
+        public String           message;
+        public List<priceTick>  tick;
+        public priceHeartbeat   heartbeat;
+        public String           timestamp;
+    }
 
-	public static class setOrderResponse {
-		public int              result;
-		public String           message;
-		public List<orderRequest>    order;
-		public String           timestamp;
-	}
-	
-	public static class orderRequest {
-		public String  security;
-		public String  tinterface;
-		public int     quantity;
-		public String  side;
-		public String  type;
-		public String  timeinforce;
-		public double  price;
-		public int     expiration;
-		public int     userparam;
-		public int     tempid;
-		public String  result;
-	}
+    public static class priceTick {
+        public String  security;
+        public String  tinterface;
+        public double  price;
+        public int     pips;
+        public int     liquidity;
+        public String  side;
+    }
 
-	public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+    public static class priceHeartbeat {
+        public List<String>  security;
+        public List<String>  tinterface;
+    }
+
+    public static void main(String[] args) throws IOException, DecoderException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
     	
     	// get properties from file
     	getProperties();
@@ -210,14 +218,14 @@ public class setOrder {
                         		token = response.getAuthorizationTokenResponse.token;
                         		return null;
                         	}
-                        	if (response.setOrderResponse != null){
-                        		if (response.setOrderResponse.order!= null){
-									for (orderRequest tick : response.setOrderResponse.order){
-										System.out.println("TempId: " + tick.tempid + " Security: " + tick.security + " Quantity: " + tick.quantity + " Type: " + tick.type + " Side: " + tick.side + " Price: " + tick.price + " Result: " + tick.result);
+                        	if (response.getPriceResponse != null){
+                        		if (response.getPriceResponse.tick != null){
+                                    for (priceTick tick : response.getPriceResponse.tick){
+                                    	System.out.println("Security: " + tick.security + " Price: " + tick.price +" tinterface: " + tick.tinterface +  " Side: " + tick.side + " Liquidity: " + tick.liquidity);
                                     }
-								}
-								if (response.setOrderResponse.message != null){
-									System.out.println("Message from server: " + response.setOrderResponse.message);
+                                }
+                                if (response.getPriceResponse.message != null){
+									System.out.println("Message from server: " + response.getPriceResponse.message);
 								}
                         	}
                         }
@@ -268,24 +276,9 @@ public class setOrder {
 			client.execute(httpRequest, responseHandler);
         	
 			// -----------------------------------------
-	        // Prepare and send a setOrder request with two orders
+	        //  Prepare and send a price request
 	        // -----------------------------------------
-			orderRequest order1 = new orderRequest();
-			order1.security = "EUR/USD";
-			order1.tinterface = "TI1";
-			order1.quantity = 500000;
-			order1.side = "sell";
-			order1.type = "market";
-			
-			orderRequest order2 = new orderRequest();
-			order2.security = "GBP/USD";
-			order2.tinterface = "TI1";
-			order2.quantity = 600000;
-			order2.side = "sell";
-			order2.type = "limit";
-			order2.timeinforce = "day";
-			order2.price = 1.47389;
-			hftrequest = new hftRequest(user, token, Arrays.asList(order1, order2));
+			hftrequest = new hftRequest(user, token, Arrays.asList("EUR/USD", "GBP/USD"), null, "tob", 1);
 			mapper.setSerializationInclusion(Inclusion.NON_NULL);
 			mapper.configure(DeserializationConfig.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 			request = new StringEntity(mapper.writeValueAsString(hftrequest));
@@ -339,7 +332,7 @@ public class setOrder {
 		}
     }
 
-	public setOrder() {
+	public pricePolling() {
 		super();
 	}
 

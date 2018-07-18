@@ -1,3 +1,4 @@
+package io.adhara.actfx;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -49,7 +50,7 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 
 public class priceStreaming {
 
-	private static final boolean ssl = true;
+	private static final boolean ssl = false;
 	private static final String URL = "/getPrice";
 	private static String domain;
 	private static String url_stream;
